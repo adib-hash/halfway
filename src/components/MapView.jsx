@@ -93,8 +93,7 @@ export default function MapView({ people, results, highlightedResult }) {
     : [20, 0]
 
   return (
-    <div className="w-full rounded-xl overflow-hidden border border-border" style={{ height: '320px' }}>
-      <MapContainer
+    <MapContainer
         center={center}
         zoom={3}
         style={{ height: '100%', width: '100%' }}
@@ -107,6 +106,5 @@ export default function MapView({ people, results, highlightedResult }) {
         />
         <MapController people={geocodedPeople} results={results} highlightedResult={highlightedResult} />
       </MapContainer>
-    </div>
   )
 }

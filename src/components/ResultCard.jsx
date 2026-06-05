@@ -1,9 +1,14 @@
-import { MapPin, Plane, Car, Train, Zap } from 'lucide-react'
+import { useState } from 'react'
+import { MapPin, Plane, Car, Train, Zap, ChevronDown, ChevronUp } from 'lucide-react'
 
 const MODE_ICON = { flight: Plane, drive: Car, train: Train }
 
 function formatKm(km) {
   return Number(km).toLocaleString() + ' km'
+}
+
+function formatMi(km) {
+  return Math.round(Number(km) * 0.621371).toLocaleString() + ' mi'
 }
 
 function formatHours(h) {
@@ -16,6 +21,7 @@ function formatHours(h) {
 }
 
 export default function ResultCard({ result, index, isHighlighted, onFocus }) {
+  const [travelOpen, setTravelOpen] = useState(true)
   const isWild = result.isWildCard
 
   const borderBase = isWild ? 'border-amber-800/50' : 'border-border'
@@ -74,39 +80,58 @@ export default function ResultCard({ result, index, isHighlighted, onFocus }) {
       )}
 
       {result.travelNotes?.length > 0 && (
-        <div className="border-t border-border pt-3 space-y-0">
-          <div className="flex items-center gap-1.5 text-muted text-xs uppercase tracking-wide mb-2">
-            <Plane size={12} />
-            Getting there
-          </div>
-          {result.travelNotes.map((note, i) => {
-            const ModeIcon = MODE_ICON[note.mode] || Plane
-            return (
-              <div
-                key={i}
-                className={`py-2.5 ${i < result.travelNotes.length - 1 ? 'border-b border-border/50' : ''}`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`text-sm font-semibold ${isWild ? 'text-amber-400' : 'text-accent'}`}>
-                    {note.person}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <ModeIcon size={13} className={isWild ? 'text-amber-400' : 'text-accent'} />
-                    <span className={`font-mono text-sm font-semibold ${isWild ? 'text-amber-300' : 'text-accent'}`}>
-                      {formatHours(note.durationHours)}
-                    </span>
-                    <span className="text-muted text-sm">·</span>
-                    <span className={`font-mono text-sm font-semibold ${isWild ? 'text-amber-300' : 'text-accent'}`}>
-                      {formatKm(note.distanceKm)}
-                    </span>
+        <div className="border-t border-border pt-3">
+          {/* Collapsible header */}
+          <button
+            onClick={() => setTravelOpen(o => !o)}
+            className="flex items-center justify-between w-full mb-2 group"
+          >
+            <div className="flex items-center gap-1.5 text-muted text-xs uppercase tracking-wide">
+              <Plane size={12} />
+              Getting there
+            </div>
+            {travelOpen
+              ? <ChevronUp size={14} className="text-muted group-hover:text-text transition-colors" />
+              : <ChevronDown size={14} className="text-muted group-hover:text-text transition-colors" />
+            }
+          </button>
+
+          {travelOpen && (
+            <div className="space-y-0">
+              {result.travelNotes.map((note, i) => {
+                const ModeIcon = MODE_ICON[note.mode] || Plane
+                return (
+                  <div
+                    key={i}
+                    className={`py-2.5 ${i < result.travelNotes.length - 1 ? 'border-b border-border/50' : ''}`}
+                  >
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className={`text-sm font-semibold ${isWild ? 'text-amber-400' : 'text-accent'}`}>
+                        {note.person}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <ModeIcon size={13} className={isWild ? 'text-amber-400' : 'text-accent'} />
+                        <span className={`font-mono text-sm font-semibold ${isWild ? 'text-amber-300' : 'text-accent'}`}>
+                          {formatHours(note.durationHours)}
+                        </span>
+                        <span className="text-muted text-sm">·</span>
+                        <span className={`font-mono text-sm font-semibold ${isWild ? 'text-amber-300' : 'text-accent'}`}>
+                          {formatKm(note.distanceKm)}
+                        </span>
+                        <span className="text-muted text-xs">·</span>
+                        <span className="font-mono text-sm text-muted">
+                          {formatMi(note.distanceKm)}
+                        </span>
+                      </div>
+                    </div>
+                    {note.note && (
+                      <p className="text-muted text-xs">{note.note}</p>
+                    )}
                   </div>
-                </div>
-                {note.note && (
-                  <p className="text-muted text-xs pl-0">{note.note}</p>
-                )}
-              </div>
-            )
-          })}
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
