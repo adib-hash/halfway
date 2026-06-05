@@ -58,9 +58,14 @@ export default function LocationAutocomplete({ value, onChange, onSelect, placeh
     []
   )
 
+  // Clear dropdown when value is set programmatically (not by user typing)
+  const isFocused = useRef(false)
   useEffect(() => {
-    fetchSuggestions(value)
-  }, [value, fetchSuggestions])
+    if (!isFocused.current) {
+      setSuggestions([])
+      setIsOpen(false)
+    }
+  }, [value])
 
   // Close on click outside
   useEffect(() => {
@@ -109,9 +114,14 @@ export default function LocationAutocomplete({ value, onChange, onSelect, placeh
         value={value}
         onChange={e => {
           onChange(e.target.value)
+          fetchSuggestions(e.target.value)
         }}
         onKeyDown={handleKeyDown}
-        onFocus={() => suggestions.length > 0 && setIsOpen(true)}
+        onFocus={() => {
+          isFocused.current = true
+          if (suggestions.length > 0) setIsOpen(true)
+        }}
+        onBlur={() => { isFocused.current = false }}
         className={className}
         style={{ fontSize: '16px' }}
         autoComplete="off"
