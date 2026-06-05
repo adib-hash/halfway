@@ -113,7 +113,12 @@ export default function App() {
 
       setLoadingProgress(90)
 
-      const data = await res.json()
+      let data
+      try {
+        data = await res.json()
+      } catch (_) {
+        throw new Error(res.status === 504 ? 'Request timed out — please try again' : 'Unexpected server error')
+      }
       if (!res.ok || data.error) {
         throw new Error(data.error || 'Something went wrong')
       }

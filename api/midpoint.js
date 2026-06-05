@@ -1,37 +1,21 @@
-export const config = { runtime: 'edge' }
+export const maxDuration = 60
 
-export default async function handler(req) {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-    })
-  }
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 
-  if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 })
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end()
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    )
-  }
+  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' })
 
   try {
-    const { people, centroid } = await req.json()
+    const { people, centroid } = req.body
 
     if (!people || people.length < 2) {
-      return new Response(
-        JSON.stringify({ error: 'At least 2 people required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      )
+      return res.status(400).json({ error: 'At least 2 people required' })
     }
 
     const peopleList = people
@@ -92,7 +76,7 @@ For travelNotes:
 - mode: "flight", "drive", or "train" — whichever is most realistic for that distance
 - note: short, specific detail (airline, route frequency, scenic drive, etc.)`
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const upstream = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -106,25 +90,19 @@ For travelNotes:
       }),
     })
 
-    if (!response.ok) {
-      const err = await response.text()
+    if (!upstream.ok) {
+      const err = await upstream.text()
       throw new Error(`Anthropic API error: ${err}`)
     }
 
-    const data = await response.json()
+    const data = await upstream.json()
     const text = data.content[0]?.text || '[]'
     const clean = text.replace(/```json|```/g, '').trim()
     const recommendations = JSON.parse(clean)
 
-    return new Response(
-      JSON.stringify({ recommendations }),
-      { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
-    )
+    return res.status(200).json({ recommendations })
   } catch (err) {
     console.error('Midpoint error:', err)
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
-    )
+    return res.status(500).json({ error: err.message })
   }
 }
