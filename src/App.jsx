@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, MapPin, Loader2, Clock, ChevronRight } from 'lucide-react'
+import { Plus, MapPin, Loader2, Clock, ChevronRight, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PersonInput from './components/PersonInput'
 import MapView from './components/MapView'
@@ -30,8 +30,8 @@ export default function App() {
     setRecentSearches(loadSearches())
   }, [])
 
-  const showToast = (msg, type = 'error') => {
-    setToast({ msg, type })
+  const showToast = (msg) => {
+    setToast(msg)
     setTimeout(() => setToast(null), 3000)
   }
 
@@ -41,7 +41,16 @@ export default function App() {
 
   const handleChange = useCallback((index, field, value) => {
     setPeople(prev => prev.map((p, i) =>
-      i === index ? { ...p, [field]: value, geocodeError: null } : p
+      i === index
+        ? { ...p, [field]: value, geocodeError: null, ...(field === 'location' ? { lat: null, lng: null } : {}) }
+        : p
+    ))
+  }, [])
+
+  // Called when user selects from autocomplete dropdown — pre-resolves lat/lng
+  const handleLocationSelect = useCallback((index, { location, lat, lng }) => {
+    setPeople(prev => prev.map((p, i) =>
+      i === index ? { ...p, location, lat, lng, geocodeError: null } : p
     ))
   }, [])
 
@@ -61,13 +70,12 @@ export default function App() {
     setIsLoading(true)
 
     try {
-      // Step 1: Geocode all locations
+      // Step 1: Geocode any locations not already resolved via autocomplete
       setLoadingStep('geocoding')
       const geoResults = await geocodeAll(people, (done, total) => {
         setLoadingProgress(Math.round((done / total) * 50))
       })
 
-      // Mark any geocoding errors inline
       let hasErrors = false
       setPeople(prev => prev.map((p, i) => {
         if (geoResults[i].error) {
@@ -78,7 +86,7 @@ export default function App() {
       }))
 
       if (hasErrors) {
-        setError('Some locations couldn\'t be found. Please check the highlighted fields.')
+        setError("Some locations couldn't be found. Please check the highlighted fields.")
         setIsLoading(false)
         return
       }
@@ -114,7 +122,6 @@ export default function App() {
       setResults(recs)
       setLoadingProgress(100)
 
-      // Save to recent searches
       const updated = saveSearch(geocoded, recs)
       setRecentSearches(updated)
 
@@ -137,11 +144,12 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const topResults = results.filter(r => !r.isWildCard)
+  const wildCard = results.find(r => r.isWildCard)
   const hasResults = results.length > 0
 
   return (
     <div className="min-h-screen bg-bg text-text">
-      {/* Header */}
       <header className="px-4 pt-10 pb-6 max-w-lg mx-auto">
         <div className="flex items-center gap-2.5 mb-1">
           <div className="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center">
@@ -162,6 +170,7 @@ export default function App() {
               person={person}
               index={index}
               onChange={handleChange}
+              onLocationSelect={handleLocationSelect}
               onRemove={handleRemove}
               canRemove={people.length > 2}
               geocodeError={person.geocodeError}
@@ -182,7 +191,9 @@ export default function App() {
             <div className="flex items-center gap-3 mb-3">
               <Loader2 size={16} className="text-accent animate-spin" />
               <span className="text-sm text-text">
-                {loadingStep === 'geocoding' ? 'Finding locations on the map…' : 'Asking Claude to pick the best meetup spots…'}
+                {loadingStep === 'geocoding'
+                  ? 'Finding locations on the map…'
+                  : 'Asking Claude to pick the best meetup spots…'}
               </span>
             </div>
             <div className="h-1.5 bg-border rounded-full overflow-hidden">
@@ -231,22 +242,45 @@ export default function App() {
                 highlightedResult={highlightedResult}
               />
 
-              <h2 className="text-xs font-semibold text-muted uppercase tracking-wider pt-1">
-                Top meeting spots
-              </h2>
+              {topResults.length > 0 && (
+                <>
+                  <h2 className="text-xs font-semibold text-muted uppercase tracking-wider pt-1">
+                    Top meeting spots
+                  </h2>
+                  {topResults.map((result, i) => (
+                    <ResultCard
+                      key={i}
+                      result={result}
+                      index={i}
+                      isHighlighted={highlightedResult === i}
+                      onFocus={idx => {
+                        setHighlightedResult(idx === highlightedResult ? null : idx)
+                        window.scrollTo({ top: 0, behavior: 'smooth' })
+                      }}
+                    />
+                  ))}
+                </>
+              )}
 
-              {results.map((result, i) => (
-                <ResultCard
-                  key={i}
-                  result={result}
-                  index={i}
-                  isHighlighted={highlightedResult === i}
-                  onFocus={idx => {
-                    setHighlightedResult(idx === highlightedResult ? null : idx)
-                    window.scrollTo({ top: 0, behavior: 'smooth' })
-                  }}
-                />
-              ))}
+              {wildCard && (
+                <>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Zap size={13} className="text-amber-400" />
+                    <h2 className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
+                      Wild Card Pick
+                    </h2>
+                  </div>
+                  <ResultCard
+                    result={wildCard}
+                    index={topResults.length}
+                    isHighlighted={highlightedResult === topResults.length}
+                    onFocus={idx => {
+                      setHighlightedResult(idx === highlightedResult ? null : idx)
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                  />
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -278,8 +312,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Footer */}
-        <p className="text-center text-muted text-xs pt-4">halfway v1.0.0</p>
+        <p className="text-center text-muted text-xs pt-4">halfway v1.1.0</p>
       </main>
 
       {/* Toast */}
@@ -291,7 +324,7 @@ export default function App() {
             exit={{ opacity: 0, y: 20 }}
             className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-3 rounded-xl bg-red-950 border border-red-800 text-red-300 text-sm max-w-xs text-center shadow-xl z-50"
           >
-            {toast.msg}
+            {toast}
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,6 +1,9 @@
 import { X } from 'lucide-react'
+import LocationAutocomplete from './LocationAutocomplete'
 
-export default function PersonInput({ person, index, onChange, onRemove, canRemove, geocodeError }) {
+export default function PersonInput({ person, index, onChange, onRemove, onLocationSelect, canRemove, geocodeError }) {
+  const inputClass = "rounded-lg px-3 py-3 text-base bg-surface border border-border text-text placeholder-muted focus:outline-none focus:border-accent transition-colors"
+
   return (
     <div className="flex flex-col gap-1">
       <div className="flex gap-2 items-center">
@@ -10,16 +13,15 @@ export default function PersonInput({ person, index, onChange, onRemove, canRemo
             placeholder="Name"
             value={person.name}
             onChange={e => onChange(index, 'name', e.target.value)}
-            className="w-1/3 rounded-lg px-3 py-3 text-base bg-surface border border-border text-text placeholder-muted focus:outline-none focus:border-accent transition-colors"
+            className={`w-1/3 ${inputClass}`}
             style={{ fontSize: '16px' }}
           />
-          <input
-            type="text"
-            placeholder="City, State or City, Country"
+          <LocationAutocomplete
             value={person.location}
-            onChange={e => onChange(index, 'location', e.target.value)}
-            className="flex-1 rounded-lg px-3 py-3 text-base bg-surface border border-border text-text placeholder-muted focus:outline-none focus:border-accent transition-colors"
-            style={{ fontSize: '16px' }}
+            placeholder="City or location"
+            className={`w-full ${inputClass}`}
+            onChange={(val) => onChange(index, 'location', val)}
+            onSelect={({ location, lat, lng }) => onLocationSelect(index, { location, lat, lng })}
           />
         </div>
         {canRemove && (

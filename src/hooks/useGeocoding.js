@@ -16,12 +16,23 @@ function delay(ms) {
 }
 
 // Geocodes all people sequentially with 1s gap (Nominatim rate limit).
-// Returns array parallel to `people` with { lat, lng } or { error } for each.
+// Skips people that already have lat/lng (pre-resolved via autocomplete).
 export async function geocodeAll(people, onProgress) {
   const results = []
+  let networkCallIndex = 0
+
   for (let i = 0; i < people.length; i++) {
-    if (i > 0) await delay(1100)
     onProgress?.(i, people.length)
+
+    // Skip geocoding if lat/lng already resolved from autocomplete
+    if (people[i].lat != null && people[i].lng != null) {
+      results.push({ lat: people[i].lat, lng: people[i].lng, error: null })
+      continue
+    }
+
+    if (networkCallIndex > 0) await delay(1100)
+    networkCallIndex++
+
     try {
       const coords = await geocodeOne(people[i].location)
       results.push({ ...coords, error: null })

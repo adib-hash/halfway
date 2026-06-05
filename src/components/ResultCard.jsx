@@ -1,45 +1,112 @@
-import { MapPin, Plane, Star } from 'lucide-react'
+import { MapPin, Plane, Car, Train, Zap } from 'lucide-react'
+
+const MODE_ICON = { flight: Plane, drive: Car, train: Train }
+
+function formatKm(km) {
+  return Number(km).toLocaleString() + ' km'
+}
+
+function formatHours(h) {
+  const hrs = parseFloat(h)
+  if (isNaN(hrs)) return h + 'h'
+  if (hrs < 1) return Math.round(hrs * 60) + 'min'
+  const whole = Math.floor(hrs)
+  const mins = Math.round((hrs - whole) * 60)
+  return mins > 0 ? `${whole}h ${mins}min` : `${whole}h`
+}
 
 export default function ResultCard({ result, index, isHighlighted, onFocus }) {
+  const isWild = result.isWildCard
+
+  const borderBase = isWild ? 'border-amber-800/50' : 'border-border'
+  const borderHighlight = isWild ? 'border-amber-500/70 shadow-amber-900/20' : 'border-accent shadow-accent/10'
+  const borderHover = isWild ? 'hover:border-amber-700/60' : 'hover:border-subtle'
+
   return (
     <div
-      className={`rounded-xl p-5 border transition-all ${
+      className={`rounded-xl p-5 border transition-all bg-surface ${
         isHighlighted
-          ? 'border-accent bg-surface shadow-lg shadow-accent/10'
-          : 'border-border bg-surface hover:border-subtle'
+          ? `${borderHighlight} shadow-lg`
+          : `${borderBase} ${borderHover}`
       }`}
     >
+      {/* Wild card label */}
+      {isWild && (
+        <div className="flex items-center gap-1.5 mb-3">
+          <Zap size={13} className="text-amber-400" />
+          <span className="text-amber-400 text-xs font-bold uppercase tracking-widest">Wild Card</span>
+        </div>
+      )}
+
       <div className="flex items-start gap-3 mb-3">
-        <span className="flex-shrink-0 w-7 h-7 rounded-full bg-accent text-bg text-sm font-bold flex items-center justify-center">
-          {index + 1}
-        </span>
+        {isWild ? (
+          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
+            <Zap size={13} className="text-amber-400" />
+          </span>
+        ) : (
+          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-accent text-bg text-sm font-bold flex items-center justify-center">
+            {index + 1}
+          </span>
+        )}
+
         <div className="flex-1 min-w-0">
           <h3 className="text-text font-semibold text-lg leading-tight">{result.city}</h3>
           <p className="text-muted text-sm">{result.country}</p>
         </div>
+
         <button
           onClick={() => onFocus(index)}
-          className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-accent border border-accent/30 hover:bg-accent/10 transition-colors"
+          className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+            isWild
+              ? 'text-amber-400 border-amber-800/50 hover:bg-amber-900/20'
+              : 'text-accent border-accent/30 hover:bg-accent/10'
+          }`}
         >
           <MapPin size={14} />
           Map
         </button>
       </div>
 
-      <p className="text-text/80 text-sm leading-relaxed mb-4">{result.rationale}</p>
+      <p className="text-text/80 text-sm leading-relaxed mb-3">{result.rationale}</p>
+
+      {isWild && result.wildCardReason && (
+        <p className="text-amber-400/80 text-sm italic mb-3">{result.wildCardReason}</p>
+      )}
 
       {result.travelNotes?.length > 0 && (
-        <div className="border-t border-border pt-3 space-y-1.5">
+        <div className="border-t border-border pt-3 space-y-0">
           <div className="flex items-center gap-1.5 text-muted text-xs uppercase tracking-wide mb-2">
             <Plane size={12} />
             Getting there
           </div>
-          {result.travelNotes.map((note, i) => (
-            <div key={i} className="flex gap-2 text-sm">
-              <span className="text-accent font-medium flex-shrink-0">{note.person}</span>
-              <span className="text-muted">{note.note}</span>
-            </div>
-          ))}
+          {result.travelNotes.map((note, i) => {
+            const ModeIcon = MODE_ICON[note.mode] || Plane
+            return (
+              <div
+                key={i}
+                className={`py-2.5 ${i < result.travelNotes.length - 1 ? 'border-b border-border/50' : ''}`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-sm font-semibold ${isWild ? 'text-amber-400' : 'text-accent'}`}>
+                    {note.person}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <ModeIcon size={13} className={isWild ? 'text-amber-400' : 'text-accent'} />
+                    <span className={`font-mono text-sm font-semibold ${isWild ? 'text-amber-300' : 'text-accent'}`}>
+                      {formatHours(note.durationHours)}
+                    </span>
+                    <span className="text-muted text-sm">·</span>
+                    <span className={`font-mono text-sm font-semibold ${isWild ? 'text-amber-300' : 'text-accent'}`}>
+                      {formatKm(note.distanceKm)}
+                    </span>
+                  </div>
+                </div>
+                {note.note && (
+                  <p className="text-muted text-xs pl-0">{note.note}</p>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
