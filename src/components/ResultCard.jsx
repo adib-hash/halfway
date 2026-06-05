@@ -21,7 +21,7 @@ function formatHours(h) {
 }
 
 export default function ResultCard({ result, index, isHighlighted, onFocus }) {
-  const [travelOpen, setTravelOpen] = useState(true)
+  const [travelOpen, setTravelOpen] = useState(false)
   const isWild = result.isWildCard
 
   const borderBase = isWild ? 'border-amber-800/50' : 'border-border'
@@ -91,8 +91,8 @@ export default function ResultCard({ result, index, isHighlighted, onFocus }) {
               Getting there
             </div>
             {travelOpen
-              ? <ChevronUp size={14} className="text-muted group-hover:text-text transition-colors" />
-              : <ChevronDown size={14} className="text-muted group-hover:text-text transition-colors" />
+              ? <ChevronUp size={18} className={isWild ? "text-amber-400" : "text-accent"} />
+              : <ChevronDown size={18} className={isWild ? "text-amber-500/60" : "text-accent/60"} />
             }
           </button>
 

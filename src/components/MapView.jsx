@@ -41,7 +41,7 @@ function makeResultIcon(num, highlighted) {
   })
 }
 
-function MapController({ people, results, highlightedResult }) {
+function MapController({ people, results, highlightedResult, onResultClick }) {
   const map = useMap()
   const markersRef = useRef([])
 
@@ -70,6 +70,7 @@ function MapController({ people, results, highlightedResult }) {
       })
         .addTo(map)
         .bindTooltip(r.city, { permanent: false, direction: 'top', offset: [0, -16] })
+        .on('click', () => onResultClick?.(i))
       markersRef.current.push(marker)
       bounds.push([r.lat, r.lng])
     })
@@ -86,7 +87,7 @@ function MapController({ people, results, highlightedResult }) {
   return null
 }
 
-export default function MapView({ people, results, highlightedResult }) {
+export default function MapView({ people, results, highlightedResult, onResultClick }) {
   const geocodedPeople = people.filter(p => p.lat != null)
   const center = geocodedPeople.length > 0
     ? [geocodedPeople[0].lat, geocodedPeople[0].lng]
@@ -104,7 +105,7 @@ export default function MapView({ people, results, highlightedResult }) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
-        <MapController people={geocodedPeople} results={results} highlightedResult={highlightedResult} />
+        <MapController people={geocodedPeople} results={results} highlightedResult={highlightedResult} onResultClick={onResultClick} />
       </MapContainer>
   )
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Plus, MapPin, Loader2, Clock, ChevronRight, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PersonInput from './components/PersonInput'
@@ -149,7 +149,10 @@ export default function App() {
   const wildCard = results.find(r => r.isWildCard)
   const hasResults = results.length > 0
 
-  // On desktop: clicking "Map" just highlights without scrolling to top
+  // Refs for each result card so we can scroll to them
+  const cardRefs = useRef([])
+
+  // Clicking the map button on a card: highlight + scroll to top on mobile
   const handleFocus = (idx) => {
     setHighlightedResult(idx === highlightedResult ? null : idx)
     if (window.innerWidth < 768) {
@@ -157,17 +160,36 @@ export default function App() {
     }
   }
 
+  // Clicking a result marker on the map: highlight + scroll to that card
+  const handleMapResultClick = (idx) => {
+    setHighlightedResult(idx)
+    const el = cardRefs.current[idx]
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }
+
   return (
     <div className="min-h-screen bg-bg text-text">
       {/* Full-width header */}
       <header className="px-6 pt-8 pb-6 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2.5 mb-1">
-          <div className="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center">
-            <MapPin size={16} className="text-accent" />
+        <button
+          onClick={() => {
+            setPeople([blankPerson(1), blankPerson(2)])
+            setResults([])
+            setGeocodedPeople([])
+            setError(null)
+            setHighlightedResult(null)
+            nextId = 3
+          }}
+          className="flex flex-col items-start group"
+        >
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="w-8 h-8 rounded-lg bg-accent/15 group-hover:bg-accent/25 flex items-center justify-center transition-colors">
+              <MapPin size={16} className="text-accent" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-text group-hover:text-accent transition-colors">halfway</h1>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-text">halfway</h1>
-        </div>
-        <p className="text-muted text-sm pl-[42px]">Find the perfect city to meet up</p>
+          <p className="text-muted text-sm pl-[42px]">Find the perfect city to meet up</p>
+        </button>
       </header>
 
       {/* Two-column layout on desktop, single-column on mobile */}
@@ -287,7 +309,7 @@ export default function App() {
                     people={geocodedPeople}
                     results={results}
                     highlightedResult={highlightedResult}
-                    fullHeight
+                    onResultClick={handleMapResultClick}
                   />
                 </div>
 
@@ -299,13 +321,14 @@ export default function App() {
                     {/* Results grid: 1 col mobile, 1 col desktop (full-width cards) */}
                     <div className="space-y-4">
                       {topResults.map((result, i) => (
-                        <ResultCard
-                          key={i}
-                          result={result}
-                          index={i}
-                          isHighlighted={highlightedResult === i}
-                          onFocus={handleFocus}
-                        />
+                        <div key={i} ref={el => cardRefs.current[i] = el}>
+                          <ResultCard
+                            result={result}
+                            index={i}
+                            isHighlighted={highlightedResult === i}
+                            onFocus={handleFocus}
+                          />
+                        </div>
                       ))}
                     </div>
                   </>
@@ -319,12 +342,14 @@ export default function App() {
                         Wild Card Pick
                       </h2>
                     </div>
-                    <ResultCard
-                      result={wildCard}
-                      index={topResults.length}
-                      isHighlighted={highlightedResult === topResults.length}
-                      onFocus={handleFocus}
-                    />
+                    <div ref={el => cardRefs.current[topResults.length] = el}>
+                      <ResultCard
+                        result={wildCard}
+                        index={topResults.length}
+                        isHighlighted={highlightedResult === topResults.length}
+                        onFocus={handleFocus}
+                      />
+                    </div>
                   </>
                 )}
               </motion.div>
